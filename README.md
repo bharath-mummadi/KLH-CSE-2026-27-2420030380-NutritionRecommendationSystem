@@ -1,43 +1,95 @@
-# KLH-CSE-2026-27-2420030380-NutritionRecommendationSystem
+# SafeNutri-RAG: ML-Based Personalized Nutrition Recommendation System
 
-ML-Based Personalized Nutrition Recommendation System
+Personalized nutrition recommendation system that predicts a person's
+calorie/macronutrient needs from real health data, enforces medical safety
+via biomarker-based constraints, and (in its full design) grounds meal
+recommendations in verified nutrition data instead of free-form AI
+generation.
 
-Course: Applied Machine Learning for Text Analysis (24ALT3101)
+## Repository Structure
+```
+data/       Sample/synthetic dataset (stand-in for real NHANES data)
+docs/       Methodology, dataset sources, and architecture diagram
+reports/    Formal Word reports (Review-1, Review-2, Mini-Hackathon-1)
+results/    Generated plots, metrics, and the trained model file
+src/        Python source code for the core pipeline
+```
 
+## Problem Statement
+Generic diet plans ignore individual biology — age, BMI, biomarkers like
+glucose and HbA1c, and medical conditions. Existing systems predict
+calorie/macro needs but rarely turn these into real, verified meal plans,
+and none provide an explanation for their recommendations.
 
-Team Members: M. Bharath (2420030380), K. Abhinav (2420030263)
+## Objectives
+- Predict personalized calorie/macronutrient needs using NHANES health data.
+- Build a stronger ensemble model (LightGBM + XGBoost + Random Forest).
+- Enforce medical safety using biomarker-based hard constraints.
+- Ground meal generation in verified nutrition data (RAG).
+- Recommend meals via hybrid content + collaborative filtering.
+- Explain every recommendation using SHAP.
 
-Problem Statement
+## Datasets
+| Dataset | Role | Link |
+|---|---|---|
+| NHANES 2017–2018 | Health/biomarker data | wwwn.cdc.gov/nchs/nhanes/continuousnhanes |
+| USDA FoodData Central | Verified nutrient values | fdc.nal.usda.gov/download-datasets.html |
+| Food.com Recipes & Interactions | Recipes & ratings | kaggle.com/datasets/shuyangli94/food-com-recipes-and-user-interactions |
 
-Generic diet plans ignore individual biology, including age, BMI, biomarkers such as glucose and HbA1c, and existing medical conditions. Existing academic models are able to predict calorie and macronutrient needs, but they rarely translate these predictions into real, verified meal plans. Many LLM-based meal generators produce nutrition claims that are not grounded in real food data, creating a risk of inaccurate recommendations. Furthermore, recommendation quality in terms of relevance and ranking is almost never formally evaluated in prior work, leaving a gap in how these systems are assessed.
+Full details: [`docs/dataset_sources.md`](docs/dataset_sources.md)
 
-Objectives
+## System Architecture
+![System Architecture](docs/system_architecture.png)
 
-This project aims to develop a predictive model that estimates personalized calorie and macronutrient needs using NHANES health data. It also aims to design a stronger ensemble prediction model by combining LightGBM, XGBoost, and Random Forest to improve accuracy over single-model approaches. In addition, the project seeks to develop a safety mechanism that enforces biomarker-based constraints, such as HbA1c and glucose levels, on the recommendations generated. Finally, it aims to design an explainability module using SHAP so that every recommendation made by the system can be justified.
+Full methodology: [`docs/methodology.md`](docs/methodology.md)
 
-Literature Survey
+## What's Implemented vs. Planned
 
-A range of prior work was reviewed to establish a strong baseline for comparison. Kumari et al. (IJERT 2024) proposed an ML classification approach for personalized diet recommendation that classifies user health status based on age, meals, exercise, and weight goals, though it lacks long-term adherence evaluation. A separate system published in IJCRT (2024) used content-based filtering combined with contextual ML to support the 70/30 eating rule, but relied solely on content filtering without any collaborative signal or biomarker constraints. The chosen baseline for this project combines regression with an LLM for natural-language preference parsing, using NHANES 2017–18 data, but its LLM-generated meal plans are not grounded in verified data and it offers no explainability or ranking metrics. Other reviewed systems include a multi-model classification comparison (LightGBM, Random Forest, XGBoost, SVC, and MLP) that achieved an F1 score of 0.972 and AUC of 0.997 but lacked explainability and used a single custom dataset; a simple-averaged ensemble of Random Forest, XGBoost, and MLP that reached 87.6% accuracy but did not use proper stacking or report ranking metrics; and Golagana et al.'s (2023) AI-powered dietary recommendation system, which relies on predefined static datasets without dynamic lifestyle adaptation. Alshamrani and Srinivasan (2024) explored deep learning combined with IoT sensors for real-time recommendations, though their approach is hardware-dependent and raises cost and privacy concerns. Nakamura et al. (2024) contributed an analytical review identifying fairness and bias gaps arising from regional and cultural food differences, but proposed no standardized benchmark. A diabetes-specific system published in IJRASET (2024) compared Decision Tree, Random Forest, and Neural Network models for personalized meal plans based on glucose levels, though it remains limited to diabetic patients. Lastly, the MOPI-HFRS framework (2024) combines multi-objective optimization with LLM-based interpretation to balance health-awareness and user preference, but is computationally heavy and has not been evaluated for medical-constraint safety.
+| Component | Status |
+|---|---|
+| Data pipeline (synthetic stand-in) | ✅ Implemented, executed |
+| Feature engineering | ✅ Implemented, executed |
+| Stacked ensemble | ✅ Implemented, executed |
+| Biomarker constraint layer | ✅ Implemented, tested |
+| Feature importance / explainability | ✅ Implemented (SHAP substitute) |
+| RAG-grounded recommendation | ⏳ Planned (stretch goal) |
+| Hybrid content + collaborative recommendation | ⏳ Planned |
+| Streamlit demo | ⏳ Planned |
+| Real NHANES / LightGBM / XGBoost / SHAP | ⏳ Swap-in once internet access is available |
 
-Research Gap
+## Interactive Website
+`website/index.html` — open directly in any browser (no server needed).
+Includes a live demo that runs the actual feature-engineering and
+constraint-layer logic from `src/` in JavaScript, plus real charts from the
+executed results.
 
-Across the reviewed literature, medical conditions are typically used only as a classifier feature rather than as an enforced safety constraint, meaning no existing system uses biomarkers to actively restrict unsafe recommendations. LLM-based meal-plan generation tends to be free-form and is not grounded in verified nutrient data, creating a risk of incorrect nutritional claims. Evaluation across prior work is largely limited to accuracy, F1, and AUC, with no system reporting recommendation-quality metrics such as Precision@K or NDCG. Where ensembles are used, they typically rely on selecting a single best model or a simple average rather than a properly stacked meta-learner. Perhaps most notably, none of the reviewed systems offer any form of explainability, leaving users without any reasoning behind the recommendations they receive.
+## How to Run
+```bash
+pip install -r requirements.txt
+cd src
+python generate_synthetic_data.py
+python explain_and_evaluate.py   # runs training + evaluation + saves plots to results/
+```
 
-Innovation, Creativity & Novelty
+## Results (on synthetic data — see docs/methodology.md for caveats)
+| Model | RMSE | MAE | R² |
+|---|---|---|---|
+| HistGradientBoosting (LightGBM-analog) | 213.24 | 170.88 | 0.739 |
+| GradientBoosting (XGBoost-analog) | 209.03 | 165.91 | 0.749 |
+| Random Forest | 206.63 | 164.11 | 0.755 |
+| **Stacked Ensemble (proposed)** | **206.51** | **164.57** | **0.755** |
 
-This project addresses the identified gaps directly. Biomarker-aware constraints are used as hard safety filters rather than soft classifier features, ensuring that conditions such as elevated HbA1c or glucose actively shape recommendations. A stacked ensemble core combining LightGBM, XGBoost, and Random Forest through a meta-learner is used in place of simple averaging or single-model selection. Recommendations are grounded using a retrieval-augmented generation (RAG) approach, ensuring meal plans are built only from verified USDA and Food.com data rather than being freely generated and potentially hallucinated. The system also adopts a hybrid three-dataset design, combining NHANES, USDA, and Food.com data to enable both content-based and collaborative recommendations. Explainability is built in through SHAP, providing a feature-level explanation for every recommendation, and the system is evaluated using rigorous new metrics, including Precision@K, NDCG, nutrient-accuracy, and hallucination-rate, none of which are reported in the reviewed literature.
+See `results/` for full plots (predicted-vs-actual, model comparison,
+feature importance) and `reports/` for the full write-ups.
 
-Feasibility Analysis
+## Reports
+- `reports/Nutrition_RecSys_Project_Report.docx` — Review-1 (Problem Statement → Project Plan)
+- `reports/Nutrition_RecSys_Review2_Report.docx` — Review-2 (Methodology, System Design, Implementation, Results)
+- `reports/MiniHackathon1_SafeNutriRAG.docx` — Mini-Hackathon-1 submission (incl. Q&A prep)
 
-The core components of this project are considered low-risk and highly achievable, including direct NHANES data download, merging datasets on the SEQN identifier, training LightGBM, XGBoost, and Random Forest models, applying SHAP for explainability, and building a Streamlit demo application. Moderate effort is expected for tasks such as cleaning NHANES data to handle survey-specific codes and missing values, determining domain-appropriate constraint thresholds, and defining relevance criteria for Precision@K and NDCG evaluation. The most challenging component is the RAG setup, which involves building embeddings and FAISS-based retrieval, reliably grounding LLM output, and managing compute and time constraints when running a local LLM. Overall, the core machine learning pipeline is fully achievable within the project timeline, while the RAG and LLM layer is treated as a stretch goal to be added if time permits.
+## Demo Video
+*(Not yet recorded — add a link here once available.)*
 
-Datasets Used
-
-The project draws on three datasets. NHANES 2017–2018 provides demographic, body-measurement, biomarker, and medical-condition data, and is available directly from the CDC at wwwn.cdc.gov/nchs/nhanes/continuousnhanes. USDA FoodData Central provides verified nutrient values for individual food items and can be downloaded from fdc.nal.usda.gov/download-datasets.html. Food.com Recipes and Interactions provides recipes, ingredient lists, and user ratings, and is available on Kaggle at kaggle.com/datasets/shuyangli94/food-com-recipes-and-user-interactions.
-
-Tech Stack
-
-The machine learning components are built using Python with scikit-learn, LightGBM, XGBoost, and SHAP. The natural language and retrieval components rely on sentence-transformers and FAISS, alongside an LLM accessed either locally via Ollama or through an API. Data handling is done using pandas and NumPy, and the final system is demonstrated through a Streamlit web application.
-Data: pandas, NumPy
-Demo: Streamlit
-Demo: Streamlit
+## Status
+Core ML pipeline is complete and executed. RAG-based grounded
+recommendation and the Streamlit demo are stretch goals, planned next.

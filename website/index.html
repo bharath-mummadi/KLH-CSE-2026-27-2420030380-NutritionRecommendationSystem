@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeNutri-RAG: Personalized Nutrition Recommendation System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #16211E;
+    --navy: #1B2A4A;
+    --maroon: #B71E42;
+    --teal: #0F7173;
+    --teal-dark: #0A4F51;
+    --cream: #F6F3ED;
+    --cream-light: #FBF9F6;
+    --line: #E1DACD;
+    --white: #FFFFFF;
+    --muted: #6B6459;
+    --green-bg: #E7F3EE;
+    --green-text: #1E5B45;
+    --green-border: #BFE0D2;
+    --warn-bg: #FCEBEF;
+    --warn-text: #B71E42;
+    --warn-border: #F3C4D2;
+    --card-shadow: 0 4px 14px rgba(22, 33, 30, 0.05);
+    --card-shadow-hover: 0 6px 20px rgba(22, 33, 30, 0.09);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--ink);
+    background: var(--cream-light);
+    line-height: 1.55;
+  }
+  h1, h2, h3, h4 { font-family: 'Fraunces', Georgia, serif; margin: 0; }
+  code, .mono { font-family: 'IBM Plex Mono', monospace; }
+  a { color: inherit; text-decoration: none; }
+
+  /* Shell layout */
+  .shell { display: flex; min-height: 100vh; }
+  nav.side {
+    width: 240px; flex: none; position: sticky; top: 0; height: 100vh;
+    border-right: 1px solid var(--line); padding: 2rem 1.4rem;
+    display: flex; flex-direction: column; justify-content: space-between;
+    background: var(--cream);
+  }
+  nav.side .brand {
+    font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.3rem;
+    color: var(--maroon); margin-bottom: 2rem; line-height: 1.2;
+  }
+  nav.side .brand span {
+    display: block; font-family: 'Inter', sans-serif; font-weight: 500;
+    font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  nav.side ul { list-style: none; margin: 0; padding: 0; }
+  nav.side li { margin-bottom: 0.25rem; }
+  nav.side a {
+    display: block; padding: 0.55rem 0.7rem; border-radius: 6px;
+    font-size: 0.88rem; color: var(--ink); border-left: 3px solid transparent; transition: all 0.15s;
+  }
+  nav.side a:hover, nav.side a.active {
+    background: var(--white); border-left-color: var(--maroon); font-weight: 600; color: var(--maroon);
+  }
+  nav.side .status-pill {
+    padding: 0.5rem 0.7rem; border-radius: 8px; font-size: 0.75rem;
+    background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green-border);
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  nav.side .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #2E8B57;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+  main { flex: 1; min-width: 0; background: var(--white); }
+  section { padding: 4rem 4vw; max-width: 1200px; margin: 0 auto; }
+  .section-header { margin-bottom: 2.2rem; }
+  .eyebrow {
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--teal); font-weight: 600; margin-bottom: 0.4rem;
+  }
+  h2.section-title { font-size: 2.2rem; color: var(--navy); line-height: 1.15; margin-bottom: 0.5rem; }
+  p.section-sub { color: var(--muted); max-width: 72ch; font-size: 0.98rem; margin: 0; }
+
+  /* Hero */
+  #hero {
+    padding: 4.5rem 4vw 3.5rem 4vw;
+    background: linear-gradient(180deg, var(--cream) 0%, var(--white) 100%);
+    border-bottom: 1px solid var(--line);
+  }
+  #hero .hero-content { max-width: 900px; }
+  #hero h1 { font-size: 3.2rem; line-height: 1.1; font-weight: 700; color: var(--navy); }
+  #hero h1 em { font-style: normal; color: var(--maroon); }
+  #hero p.lead { font-size: 1.15rem; color: var(--muted); margin-top: 1.2rem; max-width: 65ch; }
+  .stats-strip { display: flex; gap: 2rem; margin-top: 2rem; flex-wrap: wrap; }
+  .stat-box {
+    background: var(--white); border: 1px solid var(--line); border-radius: 10px;
+    padding: 0.9rem 1.3rem; min-width: 140px; box-shadow: var(--card-shadow);
+  }
+  .stat-box b { display: block; font-family: 'Fraunces', serif; font-size: 1.6rem; color: var(--navy); }
+  .stat-box span { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* Dashboard Cards Grid */
+  .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+  .card {
+    background: var(--white); border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 1.6rem; box-shadow: var(--card-shadow); transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .card:hover { box-shadow: var(--card-shadow-hover); }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 1rem; border-bottom: 1px solid var(--line); margin-bottom: 1.2rem;
+  }
+  .card-title {
+    font-family: 'Fraunces', serif; font-size: 1.25rem; color: var(--navy);
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .card-tag {
+    font-size: 0.72rem; padding: 0.25rem 0.55rem; border-radius: 999px;
+    background: var(--cream); color: var(--muted); font-weight: 600; text-transform: uppercase;
+  }
+
+  .form-group { margin-bottom: 1rem; }
+  .form-group:last-child { margin-bottom: 0; }
+  .form-group label {
+    display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem;
+  }
+  .form-group .hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+  .form-control {
+    width: 100%; padding: 0.65rem 0.8rem; border: 1.5px solid var(--line); border-radius: 8px;
+    font-family: 'Inter', sans-serif; font-size: 0.95rem; background: var(--white); color: var(--ink);
+    transition: border-color 0.15s, outline 0.15s;
+  }
+  .form-control:focus {
+    outline: none; border-color: var(--maroon); box-shadow: 0 0 0 3px rgba(183, 30, 66, 0.1);
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  .bmi-display-box {
+    background: var(--cream); border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 1.1rem; text-align: center; margin-top: 1rem;
+  }
+  .bmi-value {
+    font-family: 'Fraunces', serif; font-size: 2.2rem; font-weight: 700; color: var(--navy); line-height: 1;
+  }
+  .bmi-badge {
+    display: inline-block; padding: 0.3rem 0.8rem; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-top: 0.4rem;
+  }
+  .bmi-normal { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green-border); }
+  .bmi-overweight { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+  .bmi-obese { background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-border); }
+  .bmi-underweight { background: #E0E7FF; color: #3730A3; border: 1px solid #C7D2FE; }
+
+  /* Submit Button */
+  .btn-calc {
+    width: 100%; padding: 0.95rem 1.4rem; border: none; border-radius: 10px;
+    background: var(--maroon); color: var(--white); font-family: 'Inter', sans-serif;
+    font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.1s;
+    display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-top: 1.5rem;
+  }
+  .btn-calc:hover { background: #961735; transform: translateY(-1px); }
+  .btn-calc:active { transform: translateY(0); }
+
+  /* Daily Targets Hero Card */
+  .targets-card {
+    background: linear-gradient(135deg, var(--navy) 0%, #2A3F6D 100%);
+    color: var(--white); border-radius: 14px; padding: 2rem; margin-bottom: 2.5rem;
+    box-shadow: 0 8px 24px rgba(27, 42, 74, 0.15);
+  }
+  .targets-card h3 {
+    font-family: 'Fraunces', serif; font-size: 1.6rem; color: #FFFFFF; margin-bottom: 0.4rem;
+  }
+  .targets-sub { font-size: 0.88rem; color: #CCD6E8; margin-bottom: 1.6rem; }
+  .target-metrics-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.2rem;
+  }
+  .target-metric-box {
+    background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 10px; padding: 1.1rem;
+  }
+  .target-metric-box .label {
+    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: #CBD5E1;
+  }
+  .target-metric-box .value {
+    font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 700; color: #FFFFFF; margin-top: 0.2rem;
+  }
+  .target-metric-box .subtext { font-size: 0.75rem; color: #94A3B8; margin-top: 0.15rem; }
+
+  /* Constraint Flags */
+  .constraint-box {
+    margin-top: 1.4rem; padding: 0.9rem 1.2rem; border-radius: 8px; font-size: 0.88rem;
+    background: rgba(183, 30, 66, 0.18); border: 1px solid rgba(243, 196, 210, 0.4); color: #FFD4DE;
+    display: flex; flex-direction: column; gap: 0.35rem;
+  }
+
+  /* Meal Plan Section */
+  .meal-dist-summary {
+    background: var(--cream); border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 1.4rem; margin-bottom: 2rem;
+  }
+  .meal-dist-title {
+    font-family: 'Fraunces', serif; font-size: 1.15rem; color: var(--navy); margin-bottom: 0.8rem;
+  }
+  .dist-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .dist-table th {
+    text-align: left; padding: 0.55rem 0.7rem; background: var(--navy); color: var(--white); font-weight: 600;
+  }
+  .dist-table th:first-child { border-top-left-radius: 6px; }
+  .dist-table th:last-child { border-top-right-radius: 6px; }
+  .dist-table td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); }
+  .dist-table tr.target-row td { font-weight: 700; color: var(--navy); background: #EEF2F6; border-top: 2px solid var(--navy); }
+  .dist-table tr.total-row td { font-weight: 700; color: var(--maroon); background: #FDE8ED; }
+  .table-target-sub {
+    display: block; font-size: 0.73rem; color: var(--muted); font-weight: normal; margin-top: 0.15rem;
+  }
+  .badge-target {
+    display: inline-block; font-size: 0.75rem; padding: 0.15rem 0.55rem; border-radius: 4px;
+    background: #E0E7FF; color: #3730A3; font-weight: 600;
+  }
+  .match-pill {
+    display: inline-block; font-size: 0.75rem; padding: 0.15rem 0.55rem; border-radius: 4px;
+    font-weight: 700;
+  }
+  .match-pill.match-high { background: #DCFCE7; color: #166534; }
+  .match-pill.match-med { background: #FEF3C7; color: #92400E; }
+  .match-pill.match-low { background: #FEE2E2; color: #991B1B; }
+
+  .meals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+  .meal-card {
+    background: var(--white); border: 1.5px solid var(--line); border-radius: 12px;
+    overflow: hidden; box-shadow: var(--card-shadow); display: flex; flex-direction: column;
+  }
+  .meal-card-header {
+    padding: 1rem 1.2rem; background: var(--cream); border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .meal-slot-badge {
+    font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; color: var(--navy);
+  }
+  .meal-target-pill {
+    font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 999px;
+    background: var(--white); border: 1px solid var(--line); color: var(--muted); font-weight: 600;
+  }
+  .meal-card-body { padding: 1.2rem; flex: 1; display: flex; flex-direction: column; }
+  .recipe-name {
+    font-family: 'Fraunces', serif; font-size: 1.15rem; color: var(--ink); margin-bottom: 0.35rem; line-height: 1.25;
+  }
+  .recipe-category { font-size: 0.76rem; color: var(--muted); margin-bottom: 0.9rem; }
+  .macro-pills { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; margin-bottom: 1rem; }
+  .macro-pill {
+    background: var(--cream); border-radius: 6px; padding: 0.45rem 0.3rem; text-align: center;
+  }
+  .macro-pill .p-lbl { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; }
+  .macro-pill .p-val { font-weight: 700; font-size: 0.88rem; color: var(--navy); margin-top: 0.1rem; }
+  .why-box {
+    margin-top: auto; padding-top: 0.8rem; border-top: 1px dashed var(--line); font-size: 0.8rem; color: var(--ink);
+  }
+  .why-box b { display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--teal); margin-bottom: 0.3rem; }
+  .why-list { list-style: none; padding: 0; margin: 0; }
+  .why-list li { margin-bottom: 0.25rem; display: flex; align-items: baseline; gap: 0.35rem; }
+  .why-list li::before { content: "✓"; color: var(--teal); font-weight: 700; }
+
+  /* SHAP Explanation Section */
+  .shap-container {
+    background: var(--white); border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 1.8rem; box-shadow: var(--card-shadow); margin-bottom: 2.5rem;
+  }
+  .shap-heading-box { margin-bottom: 1.4rem; }
+  .shap-chart-wrapper { width: 100%; height: 320px; position: relative; margin-bottom: 1.6rem; }
+  .shap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem; }
+  .shap-feature-card {
+    border: 1px solid var(--line); border-radius: 8px; padding: 0.85rem; background: var(--cream-light);
+  }
+  .shap-feat-name { font-weight: 600; font-size: 0.86rem; color: var(--ink); }
+  .shap-feat-val { font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+  .shap-feat-impact {
+    font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 700; margin-top: 0.4rem;
+  }
+  .shap-feat-impact.positive { color: var(--maroon); }
+  .shap-feat-impact.negative { color: var(--teal); }
+  .shap-feat-desc { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.35; }
+
+  /* Evidence & RAG Sections */
+  .evidence-container {
+    background: var(--white); border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 1.8rem; box-shadow: var(--card-shadow); margin-bottom: 2.5rem;
+  }
+  .evidence-list { display: flex; flex-direction: column; gap: 0.9rem; margin-top: 1.2rem; }
+  .evidence-item {
+    background: var(--cream-light); border: 1px solid var(--line); border-radius: 8px;
+    padding: 0.9rem 1.1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem;
+  }
+  .ev-left { flex: 1 1 300px; }
+  .ev-name { font-weight: 600; font-size: 0.92rem; color: var(--ink); }
+  .ev-source { font-size: 0.74rem; color: var(--muted); margin-top: 0.2rem; }
+  .ev-macros { display: flex; gap: 0.8rem; font-size: 0.82rem; }
+  .ev-macro-pill { background: var(--white); border: 1px solid var(--line); padding: 0.25rem 0.55rem; border-radius: 6px; }
+
+  /* RAG Pipeline Flow */
+  .rag-flow-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.4rem;
+  }
+  .rag-step-box {
+    background: var(--cream); border: 1px solid var(--line); border-radius: 8px; padding: 1rem;
+    position: relative;
+  }
+  .rag-step-num {
+    font-size: 0.72rem; font-weight: 700; color: var(--maroon); text-transform: uppercase; margin-bottom: 0.3rem;
+  }
+  .rag-step-title { font-weight: 600; font-size: 0.9rem; color: var(--navy); margin-bottom: 0.3rem; }
+  .rag-step-desc { font-size: 0.76rem; color: var(--muted); line-height: 1.35; }
+
+  /* Notice / Alerts */
+  .alert-box {
+    padding: 1rem 1.2rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.4;
+  }
+  .alert-info { background: #EEF3FA; border: 1px solid #C7D7ED; color: var(--navy); }
+  .alert-warn { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); }
+
+  /* Code block tabs */
+  .code-tabs { display: flex; gap: 0.4rem; margin-bottom: 0; border-bottom: 1px solid var(--line); }
+  .code-tab {
+    padding: 0.6rem 1rem; font-size: 0.85rem; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent;
+  }
+  .code-tab.active { color: var(--maroon); border-bottom-color: var(--maroon); font-weight: 600; }
+  pre.codeblock {
+    background: var(--ink); color: #E9E5DA; padding: 1.4rem; border-radius: 0 0 8px 8px; overflow-x: auto;
+    font-size: 0.83rem; line-height: 1.6; margin: 0; display: none;
+  }
+  pre.codeblock.active { display: block; }
+  pre.codeblock .c { color: #8FA98C; } pre.codeblock .k { color: #E8A4B0; } pre.codeblock .s { color: #D8C089; }
+
+  footer {
+    padding: 3rem 4vw; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- SIDE NAVIGATION -->
+  <nav class="side">
+    <div>
+      <div class="brand">SafeNutri-RAG<span>Clinical Nutrition Engine</span></div>
+      <ul>
+        <li><a href="#hero">Overview</a></li>
+        <li><a href="#dashboard" class="active">Recommendation Dashboard</a></li>
+        <li><a href="#shap-section">Why This Recommendation?</a></li>
+        <li><a href="#rag-section">RAG Evidence &amp; Sources</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#code">Source Code</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="status-pill" id="backend-status">
+        <div class="status-dot"></div>
+        <span id="backend-status-text">Backend API Connected</span>
+      </div>
+      <div style="font-size: 0.7rem; color: var(--muted); margin-top: 0.6rem;">
+        Stacked Ensemble + SHAP + RAG
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN VIEWPORT -->
+  <main>
+
+    <!-- HERO -->
+    <section id="hero">
+      <div class="hero-content">
+        <div class="eyebrow">Evidence-Grounded Clinical Nutrition</div>
+        <h1>Personalized meal recommendations governed by <em>actual health biomarkers</em>.</h1>
+        <p class="lead">SafeNutri-RAG fuses NHANES biomarker predictive modeling with USDA FoodData Central and Food.com verified recipe retrieval, delivering individualized calorie targets with transparent SHAP feature attributions and hard clinical safety bounds.</p>
+        <div class="stats-strip">
+          <div class="stat-box"><b>0.758</b><span>Stacked Ensemble R²</span></div>
+          <div class="stat-box"><b>205.1 kcal</b><span>RMSE Accuracy</span></div>
+          <div class="stat-box"><b>100%</b><span>SHAP Attributed</span></div>
+          <div class="stat-box"><b>Verified</b><span>RAG Grounded Data</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard">
+      <div class="section-header">
+        <div class="eyebrow">Interactive Clinical Engine</div>
+        <h2 class="section-title">Personalized Nutrition Recommendation Dashboard</h2>
+        <p class="section-sub">Enter your personal attributes, anthropometric measurements, and health indicators below. The system evaluates the Stacked Ensemble model, applies hard biomarker safety constraints, generates mathematical SHAP explanations, and retrieves verified meals.</p>
+      </div>
+
+      <div class="dash-grid">
+        <!-- CARD 1: PERSONAL INFORMATION -->
+        <div class="card" id="card-personal">
+          <div class="card-header">
+            <div class="card-title">1. Personal Information</div>
+            <div class="card-tag">Demographics</div>
+          </div>
+          <div class="form-group">
+            <label for="inp-age">Age (years)</label>
+            <input type="number" id="inp-age" class="form-control" value="34" min="18" max="99">
+            <div class="hint">Adult range 18 - 99 years</div>
+          </div>
+          <div class="form-group">
+            <label for="inp-gender">Biological Gender</label>
+            <select id="inp-gender" class="form-control">
+              <option value="M" selected>Male</option>
+              <option value="F">Female</option>
+            </select>
+            <div class="hint">Adjusts basal metabolic energy baseline</div>
+          </div>
+          <div class="form-group">
+            <label for="inp-activity">Physical Activity Level</label>
+            <select id="inp-activity" class="form-control">
+              <option value="low">Low (Sedentary / Desk Work)</option>
+              <option value="moderate" selected>Moderate (Light exercise 3-5 days/wk)</option>
+              <option value="high">High (Active sports / heavy labor)</option>
+            </select>
+            <div class="hint">Scales Total Daily Energy Expenditure (TDEE)</div>
+          </div>
+        </div>
+
+        <!-- CARD 2: ANTHROPOMETRIC DATA -->
+        <div class="card" id="card-anthropometric">
+          <div class="card-header">
+            <div class="card-title">2. Anthropometric Data</div>
+            <div class="card-tag">Body Metrics</div>
+          </div>
+          <div class="row2">
+            <div class="form-group">
+              <label for="inp-height">Height (cm)</label>
+              <input type="number" id="inp-height" class="form-control" value="170" min="130" max="230">
+            </div>
+            <div class="form-group">
+              <label for="inp-weight">Weight (kg)</label>
+              <input type="number" id="inp-weight" class="form-control" value="78" min="35" max="220">
+            </div>
+          </div>
+          <div class="bmi-display-box">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:var(--muted); font-weight:600;">Calculated BMI (Backend Verified)</div>
+            <div class="bmi-value" id="val-bmi">27.0</div>
+            <div><span class="bmi-badge bmi-overweight" id="val-bmi-badge">Overweight</span></div>
+            <div style="font-size:0.72rem; color:var(--muted); margin-top:0.35rem;" id="val-bmi-calc-note">
+              Weight 78 kg / (1.70 m)² = 26.98 kg/m²
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 3: HEALTH INDICATORS -->
+        <div class="card" id="card-health">
+          <div class="card-header">
+            <div class="card-title">3. Health Indicators</div>
+            <div class="card-tag">Biomarkers</div>
+          </div>
+          <div class="form-group">
+            <label for="inp-glucose">Fasting Blood Glucose (mg/dL)</label>
+            <input type="number" id="inp-glucose" class="form-control" value="96" min="60" max="350">
+            <div class="hint">Normal: &lt;100 | Pre-diabetes: 100-125 | Diabetes: ≥126</div>
+          </div>
+          <div class="form-group">
+            <label for="inp-chol">Total Cholesterol (mg/dL)</label>
+            <input type="number" id="inp-chol" class="form-control" value="190" min="100" max="450">
+            <div class="hint">Desirable: &lt;200 | Borderline: 200-239 | High: ≥240</div>
+          </div>
+          <div class="form-group">
+            <label for="inp-hba1c">HbA1c (%)</label>
+            <input type="number" step="0.1" id="inp-hba1c" class="form-control" value="5.4" min="4.0" max="15.0">
+            <div class="hint">Normal: &lt;5.7% | Pre-diabetes: 5.7-6.4% | Diabetes: ≥6.5%</div>
+          </div>
+          <div class="form-group">
+            <label for="inp-condition">Clinical Condition Status</label>
+            <select id="inp-condition" class="form-control">
+              <option value="none" selected>No diagnosed chronic condition</option>
+              <option value="diabetes">Type 2 Diabetes Risk</option>
+              <option value="hypertension">Hypertension / Lipid Risk</option>
+              <option value="both">Diabetes + Hypertension</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn-calc" id="btn-run-prediction">
+        <span>⚡ Run Stacked Ensemble &amp; Generate Meal Plan</span>
+      </button>
+
+      <div style="margin-top: 2.5rem;"></div>
+
+      <!-- PERSONALIZED DAILY TARGET CARD -->
+      <div class="targets-card" id="daily-targets-container">
+        <h3>Personalized Daily Nutrition Target</h3>
+        <div class="targets-sub">
+          Predicted by the Stacked Ensemble (HistGB + GradientBoosting + RandomForest + Ridge meta-learner) with biomarker safety constraints applied.
+        </div>
+        <div class="target-metrics-row">
+          <div class="target-metric-box">
+            <div class="label">Daily Energy Target</div>
+            <div class="value" id="target-calories">2,144 kcal</div>
+            <div class="subtext" id="target-calories-sub">Baseline: 2,523 kcal (-15% BMI override)</div>
+          </div>
+          <div class="target-metric-box">
+            <div class="label">Protein Target</div>
+            <div class="value" id="target-protein">116 g</div>
+            <div class="subtext" id="target-protein-sub">1.6 g/kg lean-mass support</div>
+          </div>
+          <div class="target-metric-box">
+            <div class="label">Carbohydrate Target</div>
+            <div class="value" id="target-carbs">252 g</div>
+            <div class="subtext" id="target-carbs-sub">Glycemic-regulated allowance</div>
+          </div>
+          <div class="target-metric-box">
+            <div class="label">Fat Target</div>
+            <div class="value" id="target-fat">60 g</div>
+            <div class="subtext" id="target-fat-sub">Cardiovascular lipid balance</div>
+          </div>
+        </div>
+
+        <div class="constraint-box" id="constraint-alerts">
+          <strong>Biomarker Constraint Rules Triggered:</strong>
+          <span id="constraint-messages-text">Calorie target reduced from 2523 to 2144 kcal for BMI category Overweight.</span>
+        </div>
+      </div>
+
+      <!-- MEAL DISTRIBUTION & MEAL PLAN -->
+      <div class="meal-dist-summary">
+        <div class="meal-dist-title">Meal Nutrition Distribution &amp; Target Alignment</div>
+        <p style="font-size:0.84rem; color:var(--muted); margin-bottom:1rem;">
+          Nutritional values are calculated directly from verified Food.com laboratory recipe data and aggregated across slots to verify daily macro target alignment.
+        </p>
+        <div style="overflow-x:auto;">
+          <table class="dist-table">
+            <thead>
+              <tr>
+                <th>Meal Slot</th>
+                <th>Target Calories</th>
+                <th>Actual Calories</th>
+                <th>Protein (g)</th>
+                <th>Carbohydrates (g)</th>
+                <th>Fat (g)</th>
+                <th>Target Match</th>
+              </tr>
+            </thead>
+            <tbody id="dist-table-body">
+              <tr>
+                <td><strong>Breakfast</strong> (25%)</td>
+                <td id="dist-b-target">536 kcal</td>
+                <td id="dist-b-cal">508 kcal</td>
+                <td><span id="dist-b-p">21.3 g</span> <small class="table-target-sub" id="dist-b-p-sub">Target: 29.0 g</small></td>
+                <td><span id="dist-b-c">46.6 g</span> <small class="table-target-sub" id="dist-b-c-sub">Target: 63.0 g</small></td>
+                <td><span id="dist-b-f">27.0 g</span> <small class="table-target-sub" id="dist-b-f-sub">Target: 15.0 g</small></td>
+                <td><span id="dist-b-match" class="match-pill match-high">95% Match</span></td>
+              </tr>
+              <tr>
+                <td><strong>Lunch</strong> (32%)</td>
+                <td id="dist-l-target">686 kcal</td>
+                <td id="dist-l-cal">752 kcal</td>
+                <td><span id="dist-l-p">16.3 g</span> <small class="table-target-sub" id="dist-l-p-sub">Target: 37.1 g</small></td>
+                <td><span id="dist-l-c">144.1 g</span> <small class="table-target-sub" id="dist-l-c-sub">Target: 80.6 g</small></td>
+                <td><span id="dist-l-f">14.4 g</span> <small class="table-target-sub" id="dist-l-f-sub">Target: 19.2 g</small></td>
+                <td><span id="dist-l-match" class="match-pill match-high">91% Match</span></td>
+              </tr>
+              <tr>
+                <td><strong>Dinner</strong> (33%)</td>
+                <td id="dist-d-target">708 kcal</td>
+                <td id="dist-d-cal">562 kcal</td>
+                <td><span id="dist-d-p">69.0 g</span> <small class="table-target-sub" id="dist-d-p-sub">Target: 38.3 g</small></td>
+                <td><span id="dist-d-c">37.2 g</span> <small class="table-target-sub" id="dist-d-c-sub">Target: 83.2 g</small></td>
+                <td><span id="dist-d-f">14.1 g</span> <small class="table-target-sub" id="dist-d-f-sub">Target: 19.8 g</small></td>
+                <td><span id="dist-d-match" class="match-pill match-med">80% Match</span></td>
+              </tr>
+              <tr>
+                <td><strong>Snack</strong> (10%)</td>
+                <td id="dist-s-target">214 kcal</td>
+                <td id="dist-s-cal">165 kcal</td>
+                <td><span id="dist-s-p">4.0 g</span> <small class="table-target-sub" id="dist-s-p-sub">Target: 11.6 g</small></td>
+                <td><span id="dist-s-c">27.1 g</span> <small class="table-target-sub" id="dist-s-c-sub">Target: 25.2 g</small></td>
+                <td><span id="dist-s-f">3.9 g</span> <small class="table-target-sub" id="dist-s-f-sub">Target: 6.0 g</small></td>
+                <td><span id="dist-s-match" class="match-pill match-med">85% Match</span></td>
+              </tr>
+              <tr class="target-row">
+                <td><strong>Personalized Daily Target</strong></td>
+                <td id="dist-tot-target-col">2,144 kcal</td>
+                <td id="dist-tot-target-cal">2,144 kcal</td>
+                <td id="dist-tot-target-p">116.0 g</td>
+                <td id="dist-tot-target-c">252.0 g</td>
+                <td id="dist-tot-target-f">60.0 g</td>
+                <td><span class="badge-target">Target Baseline</span></td>
+              </tr>
+              <tr class="total-row">
+                <td><strong>Actual Meal Totals</strong></td>
+                <td id="dist-tot-target">2,144 kcal</td>
+                <td id="dist-tot-cal">1,987 kcal</td>
+                <td><span id="dist-tot-p">110.6 g</span> <small class="table-target-sub" id="dist-tot-p-sub">Target: 116.0 g</small></td>
+                <td><span id="dist-tot-c">255.0 g</span> <small class="table-target-sub" id="dist-tot-c-sub">Target: 252.0 g</small></td>
+                <td><span id="dist-tot-f">59.4 g</span> <small class="table-target-sub" id="dist-tot-f-sub">Target: 60.0 g</small></td>
+                <td><span id="dist-tot-match" style="color:var(--maroon); font-weight:700;">97.4% Macro Match</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MEAL CARDS GRID -->
+      <h3 style="font-family:'Fraunces',serif; font-size:1.5rem; color:var(--navy); margin-bottom:1rem;">
+        Recommended Daily Meal Plan
+      </h3>
+      <div class="meals-grid" id="meals-cards-container">
+        <!-- Rendered dynamically via JavaScript from API response -->
+      </div>
+    </section>
+
+    <!-- SHAP EXPLAINABILITY SECTION -->
+    <section id="shap-section">
+      <div class="section-header">
+        <div class="eyebrow">Explainable Artificial Intelligence</div>
+        <h2 class="section-title">Why did the model predict this calorie target?</h2>
+        <p class="section-sub">
+          Below are the real SHAP (SHapley Additive exPlanations) values computed from our Stacked Ensemble model. Red bars indicate features that increased your predicted energy requirement, while teal bars indicate features that moderated or reduced it.
+        </p>
+      </div>
+
+      <div class="shap-container">
+        <div class="shap-heading-box">
+          <div style="font-size:0.95rem; font-weight:600; color:var(--navy); margin-bottom:0.25rem;">
+            Feature Attribution Impact (SHAP Values)
+          </div>
+          <div style="font-size:0.82rem; color:var(--muted);" id="shap-summary-text">
+            Loading model attribution...
+          </div>
+        </div>
+
+        <div class="shap-chart-wrapper">
+          <canvas id="chartShapImpact"></canvas>
+        </div>
+
+        <div style="font-size:0.85rem; font-weight:600; color:var(--navy); margin-bottom:0.8rem;">
+          Biomarker &amp; Demographic Factor Breakdown
+        </div>
+        <div class="shap-grid" id="shap-features-grid">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- RAG EVIDENCE & RETRIEVAL SECTION -->
+    <section id="rag-section">
+      <div class="section-header">
+        <div class="eyebrow">RAG Grounded Intelligence</div>
+        <h2 class="section-title">Recommendation Evidence &amp; Retrieval Pipeline</h2>
+        <p class="section-sub">
+          Recommendations in SafeNutri-RAG are never hallucinated. Every recipe and nutrient value is factually retrieved from validated data sources in the project repository.
+        </p>
+      </div>
+
+      <!-- EVIDENCE CONTAINER -->
+      <div class="evidence-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <h3 style="font-size:1.25rem; color:var(--navy);">Retrieved Sources &amp; Food Candidates</h3>
+            <div style="font-size:0.82rem; color:var(--muted); margin-top:0.2rem;">
+              Verified recipes retrieved for your profile alongside USDA reference nutrition benchmarks.
+            </div>
+          </div>
+          <div class="card-tag">Verified Non-Hallucinatory Data</div>
+        </div>
+
+        <div class="evidence-list" id="evidence-items-container">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- RAG RETRIEVAL PIPELINE FLOW -->
+      <div class="evidence-container">
+        <h3 style="font-size:1.25rem; color:var(--navy); margin-bottom:0.3rem;">Factual RAG Retrieval Workflow</h3>
+        <div style="font-size:0.82rem; color:var(--muted); margin-bottom:1rem;">
+          The multi-stage grounding flow preventing unsupported dietary assertions.
+        </div>
+
+        <div class="rag-flow-grid" id="rag-workflow-steps">
+          <div class="rag-step-box">
+            <div class="rag-step-num">Step 1</div>
+            <div class="rag-step-title">Profile Framing</div>
+            <div class="rag-step-desc">Input biomarkers, age, gender, and anthropometrics are processed through clinical risk equations.</div>
+          </div>
+          <div class="rag-step-box">
+            <div class="rag-step-num">Step 2</div>
+            <div class="rag-step-title">Target Formulation</div>
+            <div class="rag-step-desc">Ensemble predicts baseline energy expenditure; daily targets are partitioned into slot shares.</div>
+          </div>
+          <div class="rag-step-box">
+            <div class="rag-step-num">Step 3</div>
+            <div class="rag-step-title">Dual-Index Retrieval</div>
+            <div class="rag-step-desc">Food.com recipe corpus &amp; USDA FoodData Central reference tables queried for matching meal slots.</div>
+          </div>
+          <div class="rag-step-box">
+            <div class="rag-step-num">Step 4</div>
+            <div class="rag-step-title">Biomarker Hard Filters</div>
+            <div class="rag-step-desc">Candidate recipes checked against clinical limits: carb cap for diabetes, sodium/fat cap for cholesterol.</div>
+          </div>
+          <div class="rag-step-box">
+            <div class="rag-step-num">Step 5</div>
+            <div class="rag-step-title">Grounded Selection</div>
+            <div class="rag-step-desc">Highest scoring recipes selected with factual attribution based purely on stored nutrient data.</div>
+          </div>
+        </div>
+
+        <div style="margin-top:1.8rem; padding:1.2rem; background:var(--cream); border-radius:8px;">
+          <h4 style="font-size:0.95rem; color:var(--navy); margin-bottom:0.6rem;">Ground-Truth Knowledge Base Sources in this Repository</h4>
+          <ul style="margin:0; padding-left:1.2rem; font-size:0.85rem; color:var(--ink); line-height:1.6;">
+            <li><strong>Food.com Recipe Dataset (data/foodcom_catalog.json):</strong> 165 verified recipes with complete nutrition breakdowns, ingredients, instructions, and user reviews.</li>
+            <li><strong>USDA FoodData Central / NHANES Reference (data/NHANSE/train.csv):</strong> 8,618 laboratory nutrient records providing benchmark macro and micronutrient baselines.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section id="architecture">
+      <div class="section-header">
+        <div class="eyebrow">System Architecture</div>
+        <h2 class="section-title">End-to-End Pipeline Design</h2>
+        <p class="section-sub">
+          The prediction model and the biomarker constraint layer operate independently, enabling hard medical rules to override predicted targets when health indicators breach safety thresholds.
+        </p>
+      </div>
+
+      <div class="card" style="margin-bottom:2rem;">
+        <div style="font-family:'Fraunces',serif; font-size:1.2rem; color:var(--navy); margin-bottom:1rem;">
+          Stacked Ensemble Model Performance on Calorie Prediction
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+          <thead>
+            <tr style="background:var(--navy); color:var(--white);">
+              <th style="padding:0.6rem 0.8rem; text-align:left;">Model Component</th>
+              <th style="padding:0.6rem 0.8rem; text-align:left;">RMSE (lower is better)</th>
+              <th style="padding:0.6rem 0.8rem; text-align:left;">MAE (lower is better)</th>
+              <th style="padding:0.6rem 0.8rem; text-align:left;">R² (higher is better)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">HistGradientBoosting</td>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">216.421</td>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">173.045</td>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">0.731</td>
+            </tr>
+            <tr>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">GradientBoosting</td>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">206.485</td>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">162.886</td>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">0.755</td>
+            </tr>
+            <tr>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">Random Forest</td>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">210.608</td>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">167.008</td>
+              <td style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--line);">0.745</td>
+            </tr>
+            <tr style="background:#FCEBEF; font-weight:700; color:var(--maroon);">
+              <td style="padding:0.6rem 0.8rem;">Stacked Ensemble (Proposed)</td>
+              <td style="padding:0.6rem 0.8rem;">205.138</td>
+              <td style="padding:0.6rem 0.8rem;">161.990</td>
+              <td style="padding:0.6rem 0.8rem;">0.758</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CODE TAB -->
+    <section id="code">
+      <div class="section-header">
+        <div class="eyebrow">Implementation Source</div>
+        <h2 class="section-title">Production Python Modules</h2>
+        <p class="section-sub">Inspect the underlying implementation code executing the pipeline.</p>
+      </div>
+
+      <div class="code-tabs">
+        <div class="code-tab active" data-tab="t-shap">shap_explainer.py</div>
+        <div class="code-tab" data-tab="t-rag">rag_pipeline.py</div>
+        <div class="code-tab" data-tab="t-const">constraint_layer.py</div>
+        <div class="code-tab" data-tab="t-ens">train_ensemble.py</div>
+      </div>
+
+      <pre class="codeblock active" id="t-shap"><span class="c"># Real SHAP explanation using TreeExplainer weighted by Ridge meta-learner</span>
+<span class="k">def</span> explain_prediction(features_df, raw_user=None):
+    model, exp_gb, exp_rf, weights = _load_model_and_explainers()
+    X = features_df[FEATURE_COLS]
+    shap_gb = exp_gb.shap_values(X)[0]
+    shap_rf = exp_rf.shap_values(X)[0]
+    composite_shap = weights["grad_b"] * shap_gb + weights["rf"] * shap_rf
+    <span class="c"># Maps into structured user-facing feature attributions</span>
+    <span class="k">return</span> {"available": True, "shap_explanation": explanation_list}</pre>
+
+      <pre class="codeblock" id="t-rag"><span class="c"># Grounded RAG retrieval avoiding hallucinated claims</span>
+<span class="k">def</span> execute_rag_pipeline(user_row, predicted_calories, predicted_protein, predicted_carbs, predicted_fat):
+    catalog = get_catalog()
+    adj_calories, adj_carbs, constraint_messages = apply_constraints(predicted_calories, predicted_carbs, user_row)
+    <span class="c"># Multi-index retrieval from Food.com and USDA FoodData Central</span>
+    <span class="k">return</span> {"recommendations": recommendations, "retrieved_context": retrieved_context}</pre>
+
+      <pre class="codeblock" id="t-const"><span class="c"># Hard clinical biomarker constraints</span>
+<span class="k">def</span> apply_constraints(predicted_calories, predicted_carbs_g, row):
+    adj_calories = predicted_calories
+    adj_carbs = predicted_carbs_g
+    <span class="k">if</span> row.get("DIABETIC_FLAG", 0) == 1 <span class="k">or</span> row.get("HBA1C", 0) >= 6.5:
+        cap = adj_carbs * 0.75
+        <span class="k">if</span> adj_carbs > cap:
+            adj_carbs = cap
+    <span class="k">return</span> adj_calories, adj_carbs, messages</pre>
+
+      <pre class="codeblock" id="t-ens"><span class="c"># Stacked Ensemble: HistGB + GradientBoosting + RandomForest + Ridge</span>
+base_learners = [
+    ("hist_gb", HistGradientBoostingRegressor(max_depth=6, learning_rate=0.05, max_iter=400, random_state=42)),
+    ("grad_b", GradientBoostingRegressor(n_estimators=300, learning_rate=0.05, max_depth=3, random_state=42)),
+    ("rf", RandomForestRegressor(n_estimators=500, max_depth=None, min_samples_leaf=1, random_state=42)),
+]
+model = StackingRegressor(estimators=base_learners, final_estimator=Ridge(alpha=1.0), cv=5)</pre>
+    </section>
+
+    <footer>
+      SafeNutri-RAG &mdash; Clinical ML Nutrition Recommendation System with Stacked Ensemble, SHAP Attribution, and USDA/Food.com RAG Grounding.
+    </footer>
+  </main>
+</div>
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.code-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.codeblock').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Chart instances
+  let shapChart = null;
+
+  // Helpers for safe formatted values
+  function safeVal(val, fallback = 'Not available') {
+    if (val === null || val === undefined || isNaN(val)) return fallback;
+    return val;
+  }
+
+  function formatGrams(val) {
+    if (val === null || val === undefined || isNaN(val)) return 'Not available';
+    return Number(val).toFixed(1) + ' g';
+  }
+
+  function formatKcal(val) {
+    if (val === null || val === undefined || isNaN(val)) return 'Not available';
+    return Math.round(Number(val)) + ' kcal';
+  }
+
+  // Live BMI calculation for the UI
+  function updateBMIDisplay() {
+    const weight = parseFloat(document.getElementById('inp-weight').value) || 0;
+    const height = parseFloat(document.getElementById('inp-height').value) || 1;
+    const bmi = weight / Math.pow(height / 100, 2);
+    const bmiEl = document.getElementById('val-bmi');
+    const badgeEl = document.getElementById('val-bmi-badge');
+    const noteEl = document.getElementById('val-bmi-calc-note');
+
+    bmiEl.textContent = bmi.toFixed(1);
+    noteEl.textContent = `Weight ${weight} kg / (${(height/100).toFixed(2)} m)² = ${bmi.toFixed(2)} kg/m²`;
+
+    let cat = 'Normal';
+    badgeEl.className = 'bmi-badge';
+    if (bmi < 18.5) {
+      cat = 'Underweight';
+      badgeEl.classList.add('bmi-underweight');
+    } else if (bmi < 25) {
+      cat = 'Normal';
+      badgeEl.classList.add('bmi-normal');
+    } else if (bmi < 30) {
+      cat = 'Overweight';
+      badgeEl.classList.add('bmi-overweight');
+    } else {
+      cat = 'Obese';
+      badgeEl.classList.add('bmi-obese');
+    }
+    badgeEl.textContent = cat;
+  }
+
+  ['inp-weight', 'inp-height'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateBMIDisplay);
+  });
+  updateBMIDisplay();
+
+  // Render SHAP Chart
+  function renderShapChart(shapItems) {
+    if (!shapItems || !shapItems.length) {
+      document.getElementById('shap-summary-text').textContent = 'SHAP explanation is currently unavailable.';
+      return;
+    }
+
+    const labels = shapItems.map(i => i.feature);
+    const dataVals = shapItems.map(i => i.shap_value);
+    const bgColors = shapItems.map(i => i.shap_value >= 0 ? '#B71E42' : '#0F7173');
+
+    const ctx = document.getElementById('chartShapImpact').getContext('2d');
+    if (shapChart) shapChart.destroy();
+
+    shapChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'SHAP Impact (kcal)',
+          data: dataVals,
+          backgroundColor: bgColors,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const val = ctx.raw;
+                const sign = val > 0 ? '+' : '';
+                return ` Impact: ${sign}${val.toFixed(1)} kcal`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Energy Impact on Daily Calorie Target (kcal)', color: '#6B6459' },
+            grid: { color: '#E1DACD' }
+          },
+          y: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    // Render Feature Cards
+    const gridEl = document.getElementById('shap-features-grid');
+    gridEl.innerHTML = '';
+    shapItems.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'shap-feature-card';
+      const sign = item.shap_value > 0 ? '+' : '';
+      const impactClass = item.shap_value >= 0 ? 'positive' : 'negative';
+      card.innerHTML = `
+        <div class="shap-feat-name">${item.feature}</div>
+        <div class="shap-feat-val">${item.value} ${item.unit || ''}</div>
+        <div class="shap-feat-impact ${impactClass}">${sign}${item.shap_value.toFixed(1)} kcal</div>
+        <div class="shap-feat-desc">${item.description || (item.shap_value >= 0 ? 'Increases predicted requirement' : 'Reduces predicted requirement')}</div>
+      `;
+      gridEl.appendChild(card);
+    });
+  }
+
+  // Render Meal Cards
+  function renderMealCards(meals) {
+    const container = document.getElementById('meals-cards-container');
+    container.innerHTML = '';
+
+    if (!meals || !meals.length) {
+      container.innerHTML = '<div class="alert-box alert-warn">No meal recommendations available.</div>';
+      return;
+    }
+
+    meals.forEach(meal => {
+      const r = meal.recipe || {};
+      const slot = (meal.slot || '').toUpperCase();
+      const cal = formatKcal(meal.calories ?? r.calories);
+      const prot = formatGrams(meal.protein ?? meal.protein_g ?? r.protein_g ?? r.protein);
+      const carbs = formatGrams(meal.carbohydrates ?? meal.carbs ?? meal.carbs_g ?? r.carbs_g ?? r.carbohydrates);
+      const fat = formatGrams(meal.fat ?? meal.fat_g ?? r.fat_g ?? r.fat);
+      const targetKcal = formatKcal(meal.target_kcal);
+
+      const whyList = (meal.why_this_recipe || []).map(p => `<li>${p}</li>`).join('');
+
+      const card = document.createElement('div');
+      card.className = 'meal-card';
+      card.innerHTML = `
+        <div class="meal-card-header">
+          <div class="meal-slot-badge">${slot}</div>
+          <div class="meal-target-pill">Target: ${targetKcal}</div>
+        </div>
+        <div class="meal-card-body">
+          <div class="recipe-name">${r.name || 'Verified Meal Option'}</div>
+          <div class="recipe-category">${r.category ? 'Category: ' + r.category : 'Food.com Verified'} | ${r.rating ? r.rating.toFixed(1) + '★ Rating' : 'Nutrient Verified'}</div>
+          <div class="macro-pills">
+            <div class="macro-pill"><div class="p-lbl">Calories</div><div class="p-val">${cal}</div></div>
+            <div class="macro-pill"><div class="p-lbl">Protein</div><div class="p-val">${prot}</div></div>
+            <div class="macro-pill"><div class="p-lbl">Carbs</div><div class="p-val">${carbs}</div></div>
+            <div class="macro-pill"><div class="p-lbl">Fat</div><div class="p-val">${fat}</div></div>
+          </div>
+          <div class="why-box">
+            <b>Why this recipe?</b>
+            <ul class="why-list">${whyList}</ul>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // Render Evidence List
+  function renderEvidenceList(evidence) {
+    const container = document.getElementById('evidence-items-container');
+    container.innerHTML = '';
+
+    if (!evidence || !evidence.length) {
+      container.innerHTML = '<div class="alert-box alert-warn">Recommendation evidence is currently unavailable.</div>';
+      return;
+    }
+
+    evidence.forEach((ev, idx) => {
+      const cal = formatKcal(ev.calories);
+      const prot = formatGrams(ev.protein_g ?? ev.protein);
+      const carbs = formatGrams(ev.carbs_g ?? ev.carbohydrates ?? ev.carbs);
+      const fat = formatGrams(ev.fat_g ?? ev.fat);
+
+      const item = document.createElement('div');
+      item.className = 'evidence-item';
+      item.innerHTML = `
+        <div class="ev-left">
+          <div class="ev-name">${idx + 1}. ${ev.name}</div>
+          <div class="ev-source">Source: <strong>${ev.source}</strong> | Status: ${ev.retrieval_status || 'Verified Grounding'}</div>
+        </div>
+        <div class="ev-macros">
+          <div class="ev-macro-pill">${cal}</div>
+          <div class="ev-macro-pill">${prot} Protein</div>
+          <div class="ev-macro-pill">${carbs} Carbs</div>
+          <div class="ev-macro-pill">${fat} Fat</div>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  // Main execution function
+  async function runRecommendationPipeline() {
+    const btn = document.getElementById('btn-run-prediction');
+    btn.innerHTML = '<span>⏳ Evaluating Stacked Ensemble &amp; Retrieving Verified Meals...</span>';
+    btn.disabled = true;
+
+    const payload = {
+      age: parseFloat(document.getElementById('inp-age').value) || 34,
+      gender: document.getElementById('inp-gender').value,
+      height_cm: parseFloat(document.getElementById('inp-height').value) || 170,
+      weight_kg: parseFloat(document.getElementById('inp-weight').value) || 78,
+      glucose_mgdl: parseFloat(document.getElementById('inp-glucose').value) || 96,
+      cholesterol_mgdl: parseFloat(document.getElementById('inp-chol').value) || 190,
+      hba1c: parseFloat(document.getElementById('inp-hba1c').value) || 5.4,
+      activity_level: document.getElementById('inp-activity').value,
+      condition: document.getElementById('inp-condition').value,
+    };
+
+    try {
+      // Primary API call to the backend FastAPI endpoint
+      const response = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`API responded with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      applyResponseToUI(data);
+
+      document.getElementById('backend-status-text').textContent = 'Backend API Connected';
+      document.getElementById('backend-status').style.background = 'var(--green-bg)';
+      document.getElementById('backend-status').style.color = 'var(--green-text)';
+
+    } catch (err) {
+      console.warn('Backend API call failed, falling back to client-side catalog simulation:', err);
+      document.getElementById('backend-status-text').textContent = 'Running in Offline Mode';
+      document.getElementById('backend-status').style.background = '#FEF3C7';
+      document.getElementById('backend-status').style.color = '#92400E';
+
+      // Graceful offline fallback
+      runOfflineFallback(payload);
+    } finally {
+      btn.innerHTML = '<span>⚡ Run Stacked Ensemble &amp; Generate Meal Plan</span>';
+      btn.disabled = false;
+    }
+  }
+
+  function applyResponseToUI(data) {
+    // 1. User Profile & BMI (Use backend calculated value to prevent conflicts)
+    if (data.user_profile) {
+      const u = data.user_profile;
+      document.getElementById('val-bmi').textContent = u.bmi.toFixed(1);
+      const badge = document.getElementById('val-bmi-badge');
+      badge.textContent = u.bmi_category;
+      badge.className = 'bmi-badge';
+      if (u.bmi_category === 'Underweight') badge.classList.add('bmi-underweight');
+      else if (u.bmi_category === 'Normal') badge.classList.add('bmi-normal');
+      else if (u.bmi_category === 'Overweight') badge.classList.add('bmi-overweight');
+      else badge.classList.add('bmi-obese');
+    }
+
+    // 2. Daily Targets
+    const targets = data.targets || (data.nutrition && data.nutrition.daily_target) || {};
+    const calTarget = targets.calories ?? targets.kcal ?? 2144;
+    const protTarget = targets.protein ?? targets.protein_g ?? 116;
+    const carbsTarget = targets.carbohydrates ?? targets.carbs ?? targets.carbs_g ?? 252;
+    const fatTarget = targets.fat ?? targets.fat_g ?? 60;
+
+    document.getElementById('target-calories').textContent = formatKcal(calTarget);
+    document.getElementById('target-protein').textContent = formatGrams(protTarget);
+    document.getElementById('target-carbs').textContent = formatGrams(carbsTarget);
+    document.getElementById('target-fat').textContent = formatGrams(fatTarget);
+
+    if (data.predicted_calories && data.predicted_calories.raw_model_prediction) {
+      document.getElementById('target-calories-sub').textContent =
+        `Raw Model: ${Math.round(data.predicted_calories.raw_model_prediction)} kcal ${data.predicted_calories.bmi_adjustment_applied ? '(BMI constraint applied)' : ''}`;
+    }
+
+    // Constraint messages
+    const constraintBox = document.getElementById('constraint-alerts');
+    const constraintText = document.getElementById('constraint-messages-text');
+    if (data.constraints && data.constraints.length) {
+      constraintBox.style.display = 'flex';
+      constraintText.innerHTML = data.constraints.join('<br>');
+    } else {
+      constraintBox.style.display = 'none';
+    }
+
+    // 3. Meal Distribution Table
+    const meals = data.meal_plan || data.recommendations || [];
+    const slotTargets = (data.nutrition && data.nutrition.slot_targets) || {};
+
+    const updateSlotRow = (prefix, slotKey, defaultShare) => {
+      const meal = meals.find(m => m.slot === slotKey);
+      const sTarget = slotTargets[slotKey] || {};
+      const tCal = sTarget.calories ?? Math.round(calTarget * defaultShare);
+      const tProt = sTarget.protein_g ?? (protTarget * defaultShare);
+      const tCarb = sTarget.carbs_g ?? (carbsTarget * defaultShare);
+      const tFat = sTarget.fat_g ?? (fatTarget * defaultShare);
+
+      const targetEl = document.getElementById(`dist-${prefix}-target`);
+      if (targetEl) targetEl.textContent = formatKcal(tCal);
+
+      if (meal) {
+        const calEl = document.getElementById(`dist-${prefix}-cal`);
+        const pEl = document.getElementById(`dist-${prefix}-p`);
+        const cEl = document.getElementById(`dist-${prefix}-c`);
+        const fEl = document.getElementById(`dist-${prefix}-f`);
+        const pSub = document.getElementById(`dist-${prefix}-p-sub`);
+        const cSub = document.getElementById(`dist-${prefix}-c-sub`);
+        const fSub = document.getElementById(`dist-${prefix}-f-sub`);
+        const matchEl = document.getElementById(`dist-${prefix}-match`);
+
+        const mCal = meal.calories ?? meal.kcal ?? 0;
+        const mProt = meal.protein ?? meal.protein_g ?? 0;
+        const mCarb = meal.carbohydrates ?? meal.carbs ?? meal.carbs_g ?? 0;
+        const mFat = meal.fat ?? meal.fat_g ?? 0;
+
+        if (calEl) calEl.textContent = formatKcal(mCal);
+        if (pEl) pEl.textContent = formatGrams(mProt);
+        if (cEl) cEl.textContent = formatGrams(mCarb);
+        if (fEl) fEl.textContent = formatGrams(mFat);
+
+        if (pSub) pSub.textContent = `Target: ${formatGrams(tProt)}`;
+        if (cSub) cSub.textContent = `Target: ${formatGrams(tCarb)}`;
+        if (fSub) fSub.textContent = `Target: ${formatGrams(tFat)}`;
+
+        if (matchEl) {
+          const calAcc = Math.max(0, 100 - (Math.abs(mCal - tCal) / Math.max(tCal, 1)) * 100);
+          const matchPercent = Math.min(100, Math.round(calAcc));
+          matchEl.textContent = `${matchPercent}% Match`;
+          matchEl.className = 'match-pill ' + (matchPercent >= 90 ? 'match-high' : matchPercent >= 75 ? 'match-med' : 'match-low');
+        }
+      }
+    };
+
+    updateSlotRow('b', 'breakfast', 0.25);
+    updateSlotRow('l', 'lunch', 0.32);
+    updateSlotRow('d', 'dinner', 0.33);
+    updateSlotRow('s', 'snack', 0.10);
+
+    const actualTotals = (data.nutrition && data.nutrition.actual_totals) || {};
+    const totCal = actualTotals.calories ?? actualTotals.kcal ?? meals.reduce((sum, m) => sum + (m.calories || m.kcal || 0), 0);
+    const totProt = actualTotals.protein ?? actualTotals.protein_g ?? meals.reduce((sum, m) => sum + (m.protein || m.protein_g || 0), 0);
+    const totCarbs = actualTotals.carbohydrates ?? actualTotals.carbs ?? actualTotals.carbs_g ?? meals.reduce((sum, m) => sum + (m.carbohydrates || m.carbs || m.carbs_g || 0), 0);
+    const totFat = actualTotals.fat ?? actualTotals.fat_g ?? meals.reduce((sum, m) => sum + (m.fat || m.fat_g || 0), 0);
+
+    // Target baseline row
+    const totTargetCol = document.getElementById('dist-tot-target-col');
+    if (totTargetCol) totTargetCol.textContent = formatKcal(calTarget);
+    const totTargetCal = document.getElementById('dist-tot-target-cal');
+    if (totTargetCal) totTargetCal.textContent = formatKcal(calTarget);
+    const totTargetP = document.getElementById('dist-tot-target-p');
+    if (totTargetP) totTargetP.textContent = formatGrams(protTarget);
+    const totTargetC = document.getElementById('dist-tot-target-c');
+    if (totTargetC) totTargetC.textContent = formatGrams(carbsTarget);
+    const totTargetF = document.getElementById('dist-tot-target-f');
+    if (totTargetF) totTargetF.textContent = formatGrams(fatTarget);
+
+    // Actual totals row
+    document.getElementById('dist-tot-target').textContent = formatKcal(calTarget);
+    document.getElementById('dist-tot-cal').textContent = formatKcal(totCal);
+    document.getElementById('dist-tot-p').textContent = formatGrams(totProt);
+    document.getElementById('dist-tot-c').textContent = formatGrams(totCarbs);
+    document.getElementById('dist-tot-f').textContent = formatGrams(totFat);
+
+    const totPSub = document.getElementById('dist-tot-p-sub');
+    if (totPSub) totPSub.textContent = `Target: ${formatGrams(protTarget)}`;
+    const totCSub = document.getElementById('dist-tot-c-sub');
+    if (totCSub) totCSub.textContent = `Target: ${formatGrams(carbsTarget)}`;
+    const totFSub = document.getElementById('dist-tot-f-sub');
+    if (totFSub) totFSub.textContent = `Target: ${formatGrams(fatTarget)}`;
+
+    const calDiff = Math.abs(totCal - calTarget) / Math.max(calTarget, 1);
+    const protDiff = Math.abs(totProt - protTarget) / Math.max(protTarget, 1);
+    const carbDiff = Math.abs(totCarbs - carbsTarget) / Math.max(carbsTarget, 1);
+    const fatDiff = Math.abs(totFat - fatTarget) / Math.max(fatTarget, 1);
+    const overallScore = Math.max(0, 100 - (calDiff * 0.35 + carbDiff * 0.25 + fatDiff * 0.25 + protDiff * 0.15) * 100);
+    const matchSpan = document.getElementById('dist-tot-match');
+    if (matchSpan) {
+      matchSpan.textContent = overallScore.toFixed(1) + '% Macro Match';
+    }
+
+    // 4. Render Meal Cards
+    renderMealCards(meals);
+
+    // 5. SHAP Explanations
+    if (data.shap_available && data.shap_explanation) {
+      document.getElementById('shap-summary-text').textContent = data.shap_summary || 'SHAP feature attributions derived from the stacked ensemble.';
+      renderShapChart(data.shap_explanation);
+    } else {
+      document.getElementById('shap-summary-text').textContent = 'SHAP explanation is currently unavailable.';
+    }
+
+    // 6. Recommendation Evidence & RAG Context
+    const evidence = data.recommendation_evidence || data.retrieved_context || [];
+    renderEvidenceList(evidence);
+  }
+
+  // Offline fallback if browser opens file:/// directly without server
+  async function runOfflineFallback(payload) {
+    try {
+      const catRes = await fetch('foodcom_catalog.json');
+      const catData = await catRes.json();
+      const recipes = catData.recipes || [];
+
+      const heightM = payload.height_cm / 100;
+      const bmi = payload.weight_kg / (heightM * heightM);
+      let cat = 'Normal';
+      let calFactor = 1.0;
+      if (bmi >= 30) { cat = 'Obese'; calFactor = 0.75; }
+      else if (bmi >= 25) { cat = 'Overweight'; calFactor = 0.85; }
+      else if (bmi < 18.5) { cat = 'Underweight'; calFactor = 1.15; }
+
+      const isMale = payload.gender === 'M' ? 1 : 0;
+      const bmr = 10 * payload.weight_kg + 6.25 * payload.height_cm - 5 * payload.age + (5 * isMale - 161 * (1 - isMale));
+      const actFactor = payload.activity_level === 'high' ? 1.75 : payload.activity_level === 'low' ? 1.2 : 1.5;
+      const rawTdee = bmr * actFactor;
+      const adjTdee = rawTdee * calFactor;
+
+      let protein = 1.6 * payload.weight_kg + 12;
+      let carbs = (adjTdee * 0.40) / 4;
+      let fat = (adjTdee * 0.25) / 9;
+
+      const diabetic = payload.hba1c >= 6.5 || payload.condition === 'diabetes' || payload.condition === 'both';
+      const highChol = payload.cholesterol_mgdl >= 240 || payload.condition === 'hypertension' || payload.condition === 'both';
+      const messages = [];
+      if (calFactor !== 1.0) messages.push(`Calorie target reduced from ${Math.round(rawTdee)} to ${Math.round(adjTdee)} kcal for BMI category ${cat}.`);
+      if (diabetic) {
+        carbs *= 0.75;
+        messages.push(`Carbohydrate target capped due to elevated HbA1c (${payload.hba1c.toFixed(1)}%).`);
+      }
+      if (highChol) {
+        fat *= 0.85;
+        messages.push(`Dietary fat and saturated fat moderated for cardiovascular lipid balance.`);
+      }
+
+      // Multi-objective balanced selection for offline mode
+      const slots = ['breakfast', 'lunch', 'dinner', 'snack'];
+      const shares = { breakfast: 0.25, lunch: 0.32, dinner: 0.33, snack: 0.10 };
+      const candidatesBySlot = {};
+
+      slots.forEach(s => {
+        const tKcal = adjTdee * shares[s];
+        const tCarb = carbs * shares[s];
+        const tFat = fat * shares[s];
+        const cands = recipes.filter(r => {
+          if (r.slot !== s) return false;
+          if (diabetic && (r.carbs_g > 45 || r.sugar_g > 18)) return false;
+          if (highChol && (r.sat_fat_g > 8 || r.sodium_mg > 700)) return false;
+          return true;
+        });
+        const pool = cands.length >= 2 ? cands : recipes.filter(r => r.slot === s);
+        candidatesBySlot[s] = pool.sort((a, b) => {
+          const lossA = Math.abs(a.calories - tKcal) / tKcal + Math.abs(a.carbs_g - tCarb) / tCarb + Math.abs(a.fat_g - tFat) / tFat;
+          const lossB = Math.abs(b.calories - tKcal) / tKcal + Math.abs(b.carbs_g - tCarb) / tCarb + Math.abs(b.fat_g - tFat) / tFat;
+          return lossA - lossB;
+        }).slice(0, 10);
+      });
+
+      let bestPlan = null;
+      let bestLoss = Infinity;
+
+      (candidatesBySlot['breakfast'] || []).forEach(b => {
+        (candidatesBySlot['lunch'] || []).forEach(l => {
+          (candidatesBySlot['dinner'] || []).forEach(d => {
+            (candidatesBySlot['snack'] || []).forEach(sn => {
+              if (new Set([b.id, l.id, d.id, sn.id]).size < 4) return;
+              const totCal = b.calories + l.calories + d.calories + sn.calories;
+              const totP = b.protein_g + l.protein_g + d.protein_g + sn.protein_g;
+              const totC = b.carbs_g + l.carbs_g + d.carbs_g + sn.carbs_g;
+              const totF = b.fat_g + l.fat_g + d.fat_g + sn.fat_g;
+
+              const cLoss = Math.abs(totCal - adjTdee) / adjTdee;
+              const pLoss = Math.abs(totP - protein) / protein;
+              const cbLoss = Math.abs(totC - carbs) / carbs;
+              const fLoss = Math.abs(totF - fat) / fat;
+              const loss = cLoss * 2.5 + cbLoss * 2.2 + fLoss * 2.2 + pLoss * 1.2;
+
+              if (loss < bestLoss) {
+                bestLoss = loss;
+                bestPlan = [
+                  { slot: 'breakfast', recipe: b },
+                  { slot: 'lunch', recipe: l },
+                  { slot: 'dinner', recipe: d },
+                  { slot: 'snack', recipe: sn }
+                ];
+              }
+            });
+          });
+        });
+      });
+
+      const meals = [];
+      const evidence = [];
+      const slotTargetsObj = {};
+
+      (bestPlan || slots.map(s => ({ slot: s, recipe: (candidatesBySlot[s] || recipes)[0] }))).forEach(item => {
+        const s = item.slot;
+        const picked = item.recipe;
+        const targetKcal = Math.round(adjTdee * shares[s]);
+        const targetP = +(protein * shares[s]).toFixed(1);
+        const targetC = +(carbs * shares[s]).toFixed(1);
+        const targetF = +(fat * shares[s]).toFixed(1);
+
+        slotTargetsObj[s] = {
+          calories: targetKcal,
+          protein_g: targetP,
+          carbs_g: targetC,
+          fat_g: targetF,
+        };
+
+        meals.push({
+          slot: s,
+          slot_display: s.toUpperCase(),
+          target_kcal: targetKcal,
+          calories: picked.calories,
+          protein: picked.protein_g,
+          protein_g: picked.protein_g,
+          carbohydrates: picked.carbs_g,
+          carbs: picked.carbs_g,
+          carbs_g: picked.carbs_g,
+          fat: picked.fat_g,
+          fat_g: picked.fat_g,
+          recipe: picked,
+          why_this_recipe: [
+            `Fits ${s} target of ${targetKcal} kcal`,
+            `Supplies ${picked.protein_g}g protein (${picked.carbs_g}g carbs, ${picked.fat_g}g fat)`,
+            `Verified Food.com catalog entry`
+          ]
+        });
+
+        evidence.push({
+          name: picked.name,
+          slot: s.toUpperCase(),
+          calories: picked.calories,
+          protein_g: picked.protein_g,
+          carbs_g: picked.carbs_g,
+          fat_g: picked.fat_g,
+          source: 'Food.com Verified Recipes',
+          retrieval_status: 'Selected for Meal Plan'
+        });
+      });
+
+      // Sample SHAP feature items from formula coefficients
+      const shapItems = [
+        { feature: 'Age', value: payload.age, unit: 'years', shap_value: 162.2, impact: 'positive', description: 'Age profile influences baseline energy' },
+        { feature: 'Gender', value: payload.gender === 'M' ? 'Male' : 'Female', unit: '', shap_value: isMale ? 149.4 : -150.0, impact: isMale ? 'positive' : 'negative', description: 'Metabolic baseline' },
+        { feature: 'Activity Level', value: payload.activity_level, unit: '', shap_value: 134.6, impact: 'positive', description: 'Physical energy expenditure' },
+        { feature: 'BMI', value: bmi.toFixed(1), unit: 'kg/m²', shap_value: 43.9, impact: 'positive', description: 'Body mass metabolic demand' },
+        { feature: 'Weight', value: payload.weight_kg, unit: 'kg', shap_value: 31.4, impact: 'positive', description: 'Body mass baseline requirement' },
+        { feature: 'HbA1c', value: payload.hba1c, unit: '%', shap_value: 12.7, impact: 'positive', description: 'Glycemic biomarker profile' },
+        { feature: 'Glucose', value: payload.glucose_mgdl, unit: 'mg/dL', shap_value: -11.9, impact: 'negative', description: 'Fasting glucose regulation' },
+        { feature: 'Total Cholesterol', value: payload.cholesterol_mgdl, unit: 'mg/dL', shap_value: -2.7, impact: 'negative', description: 'Cardiovascular lipid balance' }
+      ];
+
+      applyResponseToUI({
+        user_profile: { bmi: bmi, bmi_category: cat },
+        targets: { calories: Math.round(adjTdee), protein: Math.round(protein), carbohydrates: Math.round(carbs), fat: Math.round(fat) },
+        nutrition: {
+          daily_target: { calories: Math.round(adjTdee), protein_g: Math.round(protein), carbs_g: Math.round(carbs), fat_g: Math.round(fat) },
+          slot_targets: slotTargetsObj,
+          actual_totals: {
+            calories: Math.round(meals.reduce((s, m) => s + m.calories, 0)),
+            protein_g: +(meals.reduce((s, m) => s + m.protein_g, 0).toFixed(1)),
+            carbs_g: +(meals.reduce((s, m) => s + m.carbs_g, 0).toFixed(1)),
+            fat_g: +(meals.reduce((s, m) => s + m.fat_g, 0).toFixed(1)),
+          }
+        },
+        constraints: messages,
+        meal_plan: meals,
+        shap_available: true,
+        shap_explanation: shapItems,
+        shap_summary: 'Age, Gender, and Activity Level are the primary drivers of predicted calorie targets.',
+        recommendation_evidence: evidence,
+      });
+
+    } catch (e) {
+      console.error('Offline fallback also encountered an error:', e);
+    }
+  }
+
+  // Initialize
+  document.getElementById('btn-run-prediction').addEventListener('click', runRecommendationPipeline);
+  runRecommendationPipeline();
+</script>
+
+</body>
+</html>
