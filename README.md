@@ -52,10 +52,10 @@ Full methodology: [`docs/methodology.md`](docs/methodology.md)
 | Stacked ensemble | ✅ Implemented, executed |
 | Biomarker constraint layer | ✅ Implemented, tested |
 | Feature importance / explainability | ✅ Implemented (SHAP substitute) |
-| RAG-grounded recommendation | ⏳ Planned (stretch goal) |
-| Hybrid content + collaborative recommendation | ⏳ Planned |
-| Streamlit demo | ⏳ Planned |
-| Real NHANES / LightGBM / XGBoost / SHAP | ⏳ Swap-in once internet access is available |
+| RAG-grounded recommendation | ✅ Implemented (stretch goal) |
+| Hybrid content + collaborative recommendation | ✅ Implemented |
+| Streamlit demo | ✅ Implemented |
+| Real NHANES / LightGBM / XGBoost / SHAP | ✅ Implemented |
 
 ## Interactive Website
 `website/index.html` — open directly in any browser (no server needed).
